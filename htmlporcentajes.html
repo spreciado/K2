@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calificación y Comparación</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 32px;
+            color: #333;
+        }
+        .container {
+            display: flex;
+            width: 90%;
+            max-width: 1600px;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .form-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            max-width: 20%;
+        }
+        .description {
+            font-size: 16px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .form-group {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+        label {
+            font-size: 18px;
+            margin-right: 10px;
+            flex: 1;
+            text-align: right;
+        }
+        input[type="number"], input[type="text"] {
+            width: 100px;
+            padding: 5px;
+            font-size: 16px;
+            text-align: center;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+            background-color: #4682B4;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        .chart-container {
+            max-width: 75%;
+            height: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Centrar el gráfico */
+            justify-content: flex-start;
+            text-align: center; /* Centrar el texto */
+        }
+        .chart-title {
+            font-size: 24px;
+            margin-bottom: 10px;
+            text-align: center;
+            width: 100%;
+        }
+        canvas {
+            width: 100%;
+            height: 750px; /* Aumentar la altura del gráfico un 25% más */
+        }
+    </style>
+</head>
+<body>
+    <h1>Descubre tu estilo de coach K2Multisport</h1>
+    <div class="container">
+        <div class="form-container">
+            <div class="description">
+                Por favor, ingresa un número de 1 a 10 donde 1 es menos relevante y 10 es la relevancia más alta.
+            </div>
+            <div class="form-group">
+                <label for="criterio1">Relacionamiento con el atleta:</label>
+                <input type="number" id="criterio1" min="1" max="10">
+            </div>
+            <div class="form-group">
+                <label for="criterio2">Chequeos:</label>
+                <input type="number" id="criterio2" min="1" max="10">
+            </div>
+            <div class="form-group">
+                <label for="criterio3">Formación:</label>
+                <input type="number" id="criterio3" min="1" max="10">
+            </div>
+            <div class="form-group">
+                <label for="criterio4">Plan de entrenamiento:</label>
+                <input type="number" id="criterio4" min="1" max="10">
+            </div>
+            <div class="form-group">
+                <label for="criterio5">Motivación:</label>
+                <input type="number" id="criterio5" min="1" max="10">
+            </div>
+            <div class="form-group">
+                <label for="nombre">Nombre:</label>
+                <input type="text" id="nombre">
+            </div>
+            <button type="button" onclick="guardarYMostrar()">Guardar y Mostrar</button>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-title" id="chartTitle">Estilo de coaching: </div>
+            <canvas id="myChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        let myChart;
+function guardarEnGoogleSheets(nombre, criterios, porcentajes) {
+    console.log("Iniciando el envío de datos a Google Sheets...");
+
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbyHsiz88piic77x2yh1pDFNZXgiHwGx99YGSVEhOJF9E6KnSm3T34GU3HX3PAnMESJs/exec';
+    const data = {
+        nombre: nombre,
+        criterios: JSON.stringify(criterios),
+        porcentajes: JSON.stringify(porcentajes)
+    };
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", scriptURL, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+            console.log('Datos enviados a Google Sheets:', xhr.responseText);
+        } else if (xhr.readyState === 4) {
+            console.error('Error al enviar los datos', xhr.statusText);
+        }
+    };
+    xhr.send(JSON.stringify(data));
+}
+
+
+function guardarYMostrar() {
+    console.log("Función guardarYMostrar llamada...");
+
+    const nombre = document.getElementById('nombre').value;
+    console.log("Nombre ingresado:", nombre);
+
+    document.getElementById('chartTitle').innerText = `Estilo de coaching: ${nombre}`;
+
+    const criterios = [
+        parseInt(document.getElementById('criterio1').value),
+        parseInt(document.getElementById('criterio2').value),
+        parseInt(document.getElementById('criterio3').value),
+        parseInt(document.getElementById('criterio4').value),
+        parseInt(document.getElementById('criterio5').value)
+    ];
+    console.log("Criterios ingresados:", criterios);
+
+    const total = criterios.reduce((a, b) => a + b, 0);
+    const porcentajes = criterios.map(c => (c / total) * 100);
+    console.log("Porcentajes calculados:", porcentajes);
+
+    // Borrar el gráfico anterior si existe
+    if (myChart) {
+        myChart.destroy();
+    }
+
+    const ctx = document.getElementById('myChart').getContext('2d');
+
+    const colores = ['#8B0000', '#FF4500', '#FFA500', '#4682B4', '#00008B'];
+
+    myChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: ['Relacionamiento con el atleta', 'Chequeos', 'Formación', 'Plan de entrenamiento', 'Motivación'],
+            datasets: [{
+                data: porcentajes,
+                backgroundColor: colores,
+            }]
+        },
+        options: {
+            plugins: {
+                legend: {
+                    position: 'right'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const valor = criterios[context.dataIndex];
+                            const porcentaje = context.raw.toFixed(2) + '%';
+                            return `${context.label}: ${valor} (${porcentaje})`;
+                        }
+                    }
+                },
+                datalabels: {
+                    color: '#fff',
+                    anchor: 'center',
+                    align: 'center',
+                    formatter: function(value, context) {
+                        return value.toFixed(2) + '%';
+                    }
+                }
+            }
+        },
+        plugins: [ChartDataLabels]
+    });
+
+    // Guardar en Google Sheets
+    guardarEnGoogleSheets(nombre, criterios, porcentajes);
+}
+    </script>
+</body>
+</html>
